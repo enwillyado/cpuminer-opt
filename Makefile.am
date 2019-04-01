@@ -73,6 +73,8 @@ cpuminer_SOURCES = \
   algo/cryptonight/cryptonight-common.c\
   algo/cryptonight/cryptonight-aesni.c\
   algo/cryptonight/cryptonight.c\
+  algo/cryptonight/cryptonight_v.cpp \
+  algo/cryptonight/cryptonightR_template.S \
   algo/cubehash/sph_cubehash.c \
   algo/cubehash/sse2/cubehash_sse2.c\
   algo/cubehash/cube-hash-2way.c \

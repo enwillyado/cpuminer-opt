@@ -50,27 +50,27 @@ void do_skein_hash(const void* input, size_t len, char* output) {
 void (* const extra_hashes[4])( const void *, size_t, char *) =
     { do_blake_hash, do_groestl_hash, do_jh_hash, do_skein_hash };
 
-void cryptonight_hash( void *restrict output, const void *input, int len )
+void cryptonight_hash( void *restrict output, const void *input, const int height );
+
+void cryptonight_hash_ori( void *restrict output, const void *input, int len )
 {
 #if defined(__AES__)
-  cryptonight_hash_aes( output, input, len );
+  cryptonight_hash_aes_ori ( output, input, len );
 #else
-  cryptonight_hash_ctx ( output, input, len );
+  cryptonight_hash_ctx_ori ( output, input, len );
 #endif
 }
 
-void cryptonight_hash_suw( void *restrict output, const void *input )
+void cryptonight_hash_suw( void *restrict output, const void *input, const int height )
 {
-#if defined(__AES__)
-  cryptonight_hash_aes( output, input, 76 );
-#else
-  cryptonight_hash_ctx ( output, input, 76 );
-#endif
+  cryptonight_hash ( output, input, height );
 }
 
 bool cryptonightV7 = false;
 
 int scanhash_cryptonight( int thr_id, struct work *work, uint32_t max_nonce,
+                   uint64_t *hashes_done );
+int scanhash_cryptonight_ori( int thr_id, struct work *work, uint32_t max_nonce,
                    uint64_t *hashes_done )
  {
     uint32_t *pdata = work->data;

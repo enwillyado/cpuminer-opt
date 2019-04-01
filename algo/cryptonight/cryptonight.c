@@ -178,7 +178,7 @@ typedef struct {
 
 static __thread cryptonight_ctx ctx;
 
-void cryptonight_hash_ctx(void* output, const void* input, int len)
+void cryptonight_hash_ctx_ori(void* output, const void* input, int len)
 {
 //    hash_process(&ctx.state.hs, (const uint8_t*) input, len);
     keccak( (const uint8_t*)input, 76, (char*)&ctx.state.hs.b, 200 );

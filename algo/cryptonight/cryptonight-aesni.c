@@ -100,7 +100,7 @@ typedef struct
 
 static __thread cryptonight_ctx ctx;
 
-void cryptonight_hash_aes( void *restrict output, const void *input, int len )
+void cryptonight_hash_aes_ori( void *restrict output, const void *input, int len )
 {
     uint8_t ExpandedKey[256] __attribute__((aligned(64)));
     __m128i *longoutput, *expkey, *xmminput;

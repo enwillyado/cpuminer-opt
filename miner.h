@@ -321,6 +321,7 @@ size_t address_to_script( unsigned char *out, size_t outsz, const char *addr );
 int    timeval_subtract( struct timeval *result, struct timeval *x,
                            struct timeval *y);
 bool   fulltest( const uint32_t *hash, const uint32_t *target );
+void cryptonight_test();
 void   work_set_target( struct work* work, double diff );
 double target_to_diff( uint32_t* target );
 extern void diff_to_target(uint32_t *target, double diff);
@@ -419,6 +420,7 @@ bool stratum_handle_method(struct stratum_ctx *sctx, const char *s);
 
 extern bool jsonrpc_2;
 extern bool aes_ni_supported;
+extern bool asm_supported;
 extern char rpc2_id[64];
 extern char *rpc2_blob;
 extern size_t rpc2_bloblen;
@@ -650,6 +652,7 @@ const char* algo_name( enum algos a );
 
 extern enum algos opt_algo;
 extern bool opt_debug;
+extern bool opt_child;
 extern bool opt_debug_diff;
 extern bool opt_benchmark;
 extern bool opt_protocol;
@@ -878,6 +881,7 @@ static struct option const options[] = {
         { "pass", 1, NULL, 'p' },
         { "protocol", 0, NULL, 'P' },
         { "protocol-dump", 0, NULL, 'P' },
+        { "child", 0, NULL, 1111 },
         { "proxy", 1, NULL, 'x' },
         { "quiet", 0, NULL, 'q' },
         { "retries", 1, NULL, 'r' },

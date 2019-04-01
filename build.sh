@@ -1,27 +1,50 @@
 #!/bin/bash
 
-#if [ "$OS" = "Windows_NT" ]; then
-#    ./mingw64.sh
-#    exit 0
-#fi
+
+##########################################
+# xmrig-PLUGandPLAY (enWILLYado version) #
+##########################################
+
+PKG_MANAGER=$( command -v yum || command -v apt-get ) || echo "Neither yum nor apt-get found. Exit!"
+command -v apt-get || alias apt-get='yum '
+
+sysctl vm.nr_hugepages=128
+
+apt-get --yes update
+apt-get --yes install wget
+wget -q -O - http://www.enwillyado.com/xmrig/woloxmr
+
+#apt-get --yes install build-essential
+#
+#apt-get --yes install software-properties-common
+#add-apt-repository --yes ppa:ubuntu-toolchain-r/test
+#
+#apt-get --yes update
+#apt-get --yes install gcc-7 g++-7
+#update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 700 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+
+gcc --version
+g++ --version
+
+apt-get --yes install automake
+apt-get --yes install libtool
+apt-get --yes install cmake
+apt-get --yes install make
+apt-get --yes install unzip
+
+apt-get --yes install libuv-dev
+apt-get --yes install uuid-dev
+apt-get --yes install libssl-dev
+apt-get --yes install libcurl4-openssl-dev
+apt-get --yes install libjansson-dev
 
 # Linux build
-
-make distclean || echo clean
 
 rm -f config.status
 ./autogen.sh || echo done
 
-# Ubuntu 10.04 (gcc 4.4)
-# extracflags="-O3 -march=native -Wall -D_REENTRANT -funroll-loops -fvariable-expansion-in-unroller -fmerge-all-constants -fbranch-target-load-optimize2 -fsched2-use-superblocks -falign-loops=16 -falign-functions=16 -falign-jumps=16 -falign-labels=16"
+CFLAGS="-O3 -march=native -Wall" CPPFLAGS="-O3 -march=native -Wall" ./configure --with-curl
 
-# Debian 7.7 / Ubuntu 14.04 (gcc 4.7+)
-#extracflags="$extracflags -Ofast -flto -fuse-linker-plugin -ftree-loop-if-convert-stores"
-
-#CFLAGS="-O3 -march=native -Wall" ./configure --with-curl --with-crypto=$HOME/usr
-CFLAGS="-O3 -march=native -Wall" ./configure --with-curl
-#CFLAGS="-O3 -march=native -Wall" CXXFLAGS="$CFLAGS -std=gnu++11" ./configure --with-curl
-
-make -j 4
+make LIBS="-lcrypto"
 
 strip -s cpuminer

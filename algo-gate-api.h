@@ -114,7 +114,7 @@ int ( *scanhash ) ( int, struct work*, uint32_t, uint64_t* );
 
 // optional unsafe, must be overwritten if algo uses function
 void ( *hash )     ( void*, const void*, uint32_t ) ;
-void ( *hash_suw ) ( void*, const void* );
+void ( *hash_suw ) ( void*, const void*, const int height );
 
 //optional, safe to use default in most cases
 bool ( *miner_thread_init )      ( int );

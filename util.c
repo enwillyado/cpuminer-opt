@@ -1592,6 +1592,10 @@ bool rpc2_job_decode(const json_t *job, struct work *work)
 		goto err_out;
 	}
 	const char *job_id = json_string_value(tmp);
+	
+	tmp = json_object_get(job, "height");
+	const int height = !tmp ? 0 : (int) json_integer_value(tmp);
+	
 	tmp = json_object_get(job, "blob");
 	if (!tmp) {
 		applog(LOG_ERR, "JSON invalid blob");
@@ -1652,6 +1656,10 @@ bool rpc2_job_decode(const json_t *job, struct work *work)
 		work->target[7] = rpc2_target;
 		if (work->job_id) free(work->job_id);
 		work->job_id = strdup(rpc2_job_id);
+		work->height = height;
+		if (!opt_quiet) {
+			applog(LOG_WARNING, "Stratum height set to %i", height);
+		}
 	}
 	return true;
 
