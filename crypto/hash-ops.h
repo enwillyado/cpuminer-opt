@@ -31,6 +31,8 @@ static inline void place_length(uint8_t *buffer, size_t bufsize, size_t length) 
 }
 #endif
 
+#endif
+
 #pragma pack(push, 1)
 union hash_state {
   uint8_t b[200];
@@ -40,8 +42,6 @@ union hash_state {
 
 void hash_permutation(union hash_state *state);
 void hash_process(union hash_state *state, const uint8_t *buf, int count);
-
-#endif
 
 enum {
   HASH_SIZE = 32,

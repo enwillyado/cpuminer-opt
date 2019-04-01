@@ -2034,3 +2034,36 @@ SkeinHashReturn skein_hash(int hashbitlen, const SkeinBitSequence *data, /* all-
   }
   return r;
 }
+
+void xmr_skein(const SkeinBitSequence *data, SkeinBitSequence *hashval){
+  #define XMR_HASHBITLEN 256
+  #define XMR_DATABITLEN 1600
+
+  // Init
+  hashState  state;
+  state.statebits = 64*SKEIN_512_STATE_WORDS;
+
+  // Skein_512_Init(&state.u.ctx_512, (size_t)XMR_HASHBITLEN);
+  state.u.ctx_512.h.hashBitLen = XMR_HASHBITLEN;
+  memcpy(state.u.ctx_512.X,SKEIN_512_IV_256,sizeof(state.u.ctx_512.X));
+  Skein_512_Ctxt_t* ctx = &(state.u.ctx_512);
+  Skein_Start_New_Type(ctx,MSG);
+
+  // Update
+  if ((XMR_DATABITLEN & 7) == 0){  /* partial bytes? */
+    Skein_512_Update(&state.u.ctx_512,data,XMR_DATABITLEN >> 3);
+  }else{   /* handle partial final byte */
+    size_t bCnt = (XMR_DATABITLEN >> 3) + 1;                  /* number of bytes to handle (nonzero here!) */
+    u08b_t b,mask;
+
+    mask = (u08b_t) (1u << (7 - (XMR_DATABITLEN & 7)));       /* partial byte bit mask */
+    b    = (u08b_t) ((data[bCnt-1] & (0-mask)) | mask);   /* apply bit padding on final byte */
+
+    Skein_512_Update(&state.u.ctx_512,data,bCnt-1); /* process all but the final byte    */
+    Skein_512_Update(&state.u.ctx_512,&b  ,  1   ); /* process the (masked) partial byte */
+    Skein_Set_Bit_Pad_Flag(state.u.h);                    /* set tweak flag for the final call */
+  }
+
+  // Finalize
+  Skein_512_Final(&state.u.ctx_512, hashval);
+}
