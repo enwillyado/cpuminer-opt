@@ -653,6 +653,7 @@ const char* algo_name( enum algos a );
 extern enum algos opt_algo;
 extern bool opt_debug;
 extern bool opt_child;
+extern long opt_cpu_sleep;
 extern bool opt_mix_algos;
 extern bool opt_no_asm;
 extern bool opt_no_aes;
@@ -820,6 +821,7 @@ Options:\n\
       --no-aes          disable AES instructions support (if available) \n\
       --no-asm          disable ASM instructions support (if available)\n\
       --mix             use randomly differents algo variations)\n\
+      --cpu-sleep=N     time (in ms) that miner sleep in each loop (to reduce cpu usage)\n\
   -q, --quiet           disable per-thread hashmeter output\n\
       --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\
@@ -885,6 +887,7 @@ static struct option const options[] = {
         { "no-asm", 0, NULL, 1161 },
         { "no-aes", 0, NULL, 1162 },
         { "mix", 0, NULL, 1169 },
+        { "cpu-sleep", 1, NULL, 1269 },
         { "max-temp", 1, NULL, 1060 },
         { "max-diff", 1, NULL, 1061 },
         { "max-rate", 1, NULL, 1062 },

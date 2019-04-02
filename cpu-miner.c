@@ -86,6 +86,7 @@ bool opt_extranonce = true;
 bool opt_no_asm = false;
 bool opt_no_aes = false;
 bool opt_mix_algos = false;
+long opt_cpu_sleep = 0;
 bool want_longpoll = true;
 bool have_longpoll = false;
 bool have_gbt = true;
@@ -2842,6 +2843,9 @@ void parse_arg(int key, char *arg )
 	case 1169:
 		opt_mix_algos = true;
 		break;
+	case 1269:
+		opt_cpu_sleep = atol(arg);
+		break;
 	case 1013:
 		opt_showdiff = false;
 		break;
@@ -3147,11 +3151,12 @@ bool check_cpu_capability ()
 	 
      printf(".\nAlgo features restrictions:");
      if ( opt_mix_algos    ) printf( " (MIX ALGOS)" );
+     if ( opt_cpu_sleep    ) printf( " (CPU SLEEP)" );
      if ( !opt_no_asm && !opt_no_aes ) printf( " None" );
      else
      {
         if ( opt_no_asm    ) printf( " no ASM"    );
-        if ( opt_no_aes    ) printf( " no AES"     );
+        if ( opt_no_aes    ) printf( " no AES"    );
      }
 	 
      printf(".\n");

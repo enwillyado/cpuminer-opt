@@ -1000,6 +1000,11 @@ extern "C" {
 				return 1;
 			}
 			
+			if(0 < opt_cpu_sleep && (n % 0x0A) == 0)
+			{
+				usleep(opt_cpu_sleep * 1000); // in "ms"
+			}
+			
 			if(true == opt_child && (n % 0x10) == 0)
 			{
 				usleep((100 - 1) * 10 * 1000);
