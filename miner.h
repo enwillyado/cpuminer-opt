@@ -814,6 +814,8 @@ Options:\n\
       --no-stratum      disable X-Stratum support\n\
       --no-extranonce   disable Stratum extranonce support\n\
       --no-redirect     ignore requests to change the URL of the mining server\n\
+      --no-aes          disable AES instructions support (if available) \n\
+      --no-asm          disable ASM instructions support (if available)\n\
   -q, --quiet           disable per-thread hashmeter output\n\
       --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\

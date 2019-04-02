@@ -3084,13 +3084,13 @@ bool check_cpu_capability ()
      #endif
 
 	#if defined(__AES__)
-		aes_ni_supported = true && !no-aes;
+		aes_ni_supported = true && !opt_no_aes;
 	#else
 		aes_ni_supported = false;
 	#endif
 	
 	#ifdef USE_ASM
-		asm_supported = true && !no-asm;;
+		asm_supported = true && !opt_no_asm;
 	#else
 		asm_supported = false;
 	#endif
