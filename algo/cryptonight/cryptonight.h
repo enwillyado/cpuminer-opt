@@ -44,9 +44,9 @@ int scanhash_cryptonight( int thr_id, struct work *work, uint32_t max_nonce,
                            uint64_t *hashes_done );
 void cryptonight_test();
 
-void cryptonight_hash_ori(     void *restrict output, const void *input, int len, const int height );
-void cryptonight_hash_ctx_ori( void *restrict output, const void *input, int len, const int height );
-void cryptonight_hash_aes_ori( void *restrict output, const void *input, int len, const int height );
+void cryptonight_hash_ori(     void *restrict output, const void *input, int len );
+void cryptonight_hash_ctx_ori( void *restrict output, const void *input, int len );
+void cryptonight_hash_aes_ori( void *restrict output, const void *input, int len );
 
 extern bool cryptonightV7;
 

@@ -466,7 +466,8 @@ json_t *json_rpc_call(CURL *curl, const char *url,
 		curl_easy_setopt(curl, CURLOPT_CAINFO, opt_cert);
 //
         curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
-
+		curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
+		
 	curl_easy_setopt(curl, CURLOPT_ENCODING, "");
 	curl_easy_setopt(curl, CURLOPT_FAILONERROR, 0);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
@@ -1159,6 +1160,7 @@ bool stratum_connect(struct stratum_ctx *sctx, const char *url)
 	if (opt_protocol)
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 	curl_easy_setopt(curl, CURLOPT_URL, sctx->curl_url);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
 	curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);
 	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, sctx->curl_err_str);
