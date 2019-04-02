@@ -83,12 +83,20 @@ extern "C" {
 		ASM_MAX
 	};
 
+	enum USES {
+		USE_BEST     = -1, //
+		USE_HARD_AES =  0, //
+		USE_SOFT_AES =  1, //
+		USE_SLOW     =  8, //
+		USE_MAX
+	};
+
 	enum Variant {
 		VARIANT_AUTO = -1, // Autodetect
 		VARIANT_0    =  0,  // Original CryptoNight or CryptoNight-Heavy
 		VARIANT_1    =  1,  // CryptoNight variant 1 also known as Monero7 and CryptoNightV7
-		VARIANT_2    =  8,  // CryptoNight variant 2
-		VARIANT_4    = 13, // CryptoNightR (Monero's variant 4)
+		VARIANT_2    =  2,  // CryptoNight variant 2
+		VARIANT_4    = 14, // CryptoNightR (Monero's variant 4)
 		VARIANT_MAX
 	};
 
@@ -170,9 +178,7 @@ static inline void do_skein_hash(const uint8_t *input, size_t len, uint8_t *outp
     xmr_skein(input, output);
 }
 
-
 void (* const extra_hashes[4])(const uint8_t *, size_t, uint8_t *) = {do_blake_hash, do_groestl_hash, do_jh_hash, do_skein_hash};
-
 
 #if defined(__x86_64__) || defined(_M_AMD64)
 #   ifdef __GNUC__
@@ -562,7 +568,7 @@ constexpr const size_t   CRYPTONIGHT_MEMORY = 2 * 1024 * 1024;
 constexpr const uint32_t CRYPTONIGHT_MASK   = 0x1FFFF0;
 constexpr const uint32_t CRYPTONIGHT_ITER   = 0x80000;
 
-template<bool SOFT_AES, Variant VARIANT>
+template<USES SOFT_AES, Variant VARIANT>
 inline void cryptonight_single_hash(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, uint64_t height)
 {
     constexpr size_t MEM          = CRYPTONIGHT_MEMORY;
@@ -578,7 +584,7 @@ inline void cryptonight_single_hash(uint8_t *__restrict__ output, const uint8_t 
 
     keccak200(input, size, ctx[0]->state);
 
-    cn_explode_scratchpad<MEM, SOFT_AES>((__m128i*) ctx[0]->state, (__m128i*) ctx[0]->memory);
+    cn_explode_scratchpad<MEM, USE_SOFT_AES == SOFT_AES>((__m128i*) ctx[0]->state, (__m128i*) ctx[0]->memory);
 
     uint64_t* h0 = reinterpret_cast<uint64_t*>(ctx[0]->state);
 
@@ -598,12 +604,12 @@ inline void cryptonight_single_hash(uint8_t *__restrict__ output, const uint8_t 
 
     for (size_t i = 0; i < ITERATIONS; i++) {
         __m128i cx;
-        if (!SOFT_AES) {
+        if (USE_SOFT_AES != SOFT_AES) {
             cx = _mm_load_si128((__m128i *) &l0[idx0 & MASK]);
         }
 
         const __m128i ax0 = _mm_set_epi64x(ah0, al0);
-        if (SOFT_AES) {
+        if (USE_SOFT_AES == SOFT_AES) {
             cx = soft_aesenc((uint32_t*)&l0[idx0 & MASK], ax0, (const uint32_t*)saes_table);
         }
         else {
@@ -675,7 +681,7 @@ inline void cryptonight_single_hash(uint8_t *__restrict__ output, const uint8_t 
     }
 
         
-    cn_implode_scratchpad<MEM, SOFT_AES>((__m128i*) ctx[0]->memory, (__m128i*) ctx[0]->state);
+    cn_implode_scratchpad<MEM, USE_SOFT_AES == SOFT_AES>((__m128i*) ctx[0]->memory, (__m128i*) ctx[0]->state);
 
     keccakf(h0, 24);
     extra_hashes[ctx[0]->state[0] & 3](ctx[0]->state, 200, output);
@@ -685,35 +691,11 @@ inline void cryptonight_single_hash(uint8_t *__restrict__ output, const uint8_t 
 extern "C" void cnv2_mainloop_ivybridge_asm(cryptonight_ctx *ctx);
 extern "C" void cnv2_mainloop_ryzen_asm(cryptonight_ctx *ctx);
 extern "C" void cnv2_mainloop_bulldozer_asm(cryptonight_ctx *ctx);
-extern "C" void cnv2_double_mainloop_sandybridge_asm(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1);
-extern "C" void cnv2_rwz_mainloop_asm(cryptonight_ctx *ctx);
-extern "C" void cnv2_rwz_double_mainloop_asm(cryptonight_ctx* ctx0, cryptonight_ctx* ctx1);
 
 typedef void (*cn_mainloop_fun)(cryptonight_ctx *ctx);
-typedef void (*cn_mainloop_double_fun)(cryptonight_ctx *ctx1, cryptonight_ctx *ctx2);
 typedef void(*void_func)();
 
 #include "cryptonightR_template.h"
-
-extern cn_mainloop_fun        cn_half_mainloop_ivybridge_asm;
-extern cn_mainloop_fun        cn_half_mainloop_ryzen_asm;
-extern cn_mainloop_fun        cn_half_mainloop_bulldozer_asm;
-extern cn_mainloop_double_fun cn_half_double_mainloop_sandybridge_asm;
-
-extern cn_mainloop_fun        cn_trtl_mainloop_ivybridge_asm;
-extern cn_mainloop_fun        cn_trtl_mainloop_ryzen_asm;
-extern cn_mainloop_fun        cn_trtl_mainloop_bulldozer_asm;
-extern cn_mainloop_double_fun cn_trtl_double_mainloop_sandybridge_asm;
-
-extern cn_mainloop_fun        cn_zls_mainloop_ivybridge_asm;
-extern cn_mainloop_fun        cn_zls_mainloop_ryzen_asm;
-extern cn_mainloop_fun        cn_zls_mainloop_bulldozer_asm;
-extern cn_mainloop_double_fun cn_zls_double_mainloop_sandybridge_asm;
-
-extern cn_mainloop_fun        cn_double_mainloop_ivybridge_asm;
-extern cn_mainloop_fun        cn_double_mainloop_ryzen_asm;
-extern cn_mainloop_fun        cn_double_mainloop_bulldozer_asm;
-extern cn_mainloop_double_fun cn_double_double_mainloop_sandybridge_asm;
 
 static inline void add_code(uint8_t* &p, void (*p1)(), void (*p2)())
 {
@@ -846,12 +828,29 @@ inline void cryptonight_single_hash_asm(uint8_t *__restrict__ output, const uint
 inline void cryptonight_hash_ctx_soft(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
 {
 	constexpr Variant VARIANT = VARIANT_4;		
-	cryptonight_single_hash<true, VARIANT>(output, input, size, ctx, height);
+	cryptonight_single_hash<USE_SOFT_AES, VARIANT>(output, input, size, ctx, height);
 }
 inline void cryptonight_hash_ctx_aes_ni(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
 {
 	constexpr Variant VARIANT = VARIANT_4;		
-	cryptonight_single_hash<false, VARIANT>(output, input, size, ctx, height);
+	cryptonight_single_hash<USE_HARD_AES, VARIANT>(output, input, size, ctx, height);
+}
+
+template<Variant VARIANT>
+inline void cryptonight_hash_ctx_t(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
+{
+	if(asm_supported)
+	{
+		cryptonight_single_hash_asm<VARIANT_4, ASM_INTEL>(output, input, size, ctx, height);
+	}
+	else if (aes_ni_supported)
+	{
+		cryptonight_single_hash<USE_HARD_AES, VARIANT>(output, input, size, ctx, height);
+	}
+	else
+	{
+		cryptonight_single_hash<USE_SOFT_AES, VARIANT>(output, input, size, ctx, height);
+	}
 }
 
 inline void cryptonight_hash_ctx(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
@@ -872,9 +871,23 @@ inline void cryptonight_hash_ctx(uint8_t *__restrict__ output, const uint8_t *__
 
 #include "cryptonight_test.h"
 
+template<Variant VARIANT>
+bool selfTest()
+{
+	uint8_t output[64];
+
+	struct cryptonight_ctx ctx0, ctx1;
+	struct cryptonight_ctx* ctx[2] = {&ctx0, &ctx1};
+
+	cryptonight_hash_ctx_t<VARIANT>(output, test_input, 76, ctx, 0);
+	
+	fprintf(stdout, " [Done VARIANT %d] ", VARIANT);
+
+	return memcmp(output, test_output_vX[VARIANT], 32) == 0;
+}
+
 bool selfTestV4()
 {
-	applog(LOG_INFO, "CryptoNight SelfTestV4 runing");
 	uint8_t output[64];
 
 	struct cryptonight_ctx ctx0, ctx1;
@@ -895,17 +908,7 @@ bool selfTestV4()
 		fprintf(stdout, ".");
 	}
 	
-	fprintf(stdout, " [Done] ");
-	
-	if(rc == true)
-	{
-		fprintf(stdout, "All self-test passed!\n");
-	}
-	else
-	{
-		fprintf(stderr, "Hash self-test failed. Abort!\n");
-		abort();
-	}
+	fprintf(stdout, " [Done VARIANT 4] ");
 	
 	return rc;
 }
@@ -913,7 +916,20 @@ bool selfTestV4()
 extern "C" {
 	void cryptonight_test()
 	{
-		selfTestV4();
+		applog(LOG_INFO, "CryptoNight SelfTests");
+		
+		fprintf(stdout, "Runing...");
+	
+		const bool rc = selfTest<VARIANT_0>() && selfTest<VARIANT_1>() && selfTest<VARIANT_2>() && selfTestV4();
+		if(rc == true)
+		{
+			fprintf(stdout, "All self-test passed!\n");
+		}
+		else
+		{
+			fprintf(stderr, "Hash self-test failed. Abort!\n");
+			abort();
+		}
 	}
 		
 	void cryptonight_hash(void* output, const void* input, const int height)
@@ -933,7 +949,23 @@ extern "C" {
 	}
 	
 	int scanhash_cryptonight(int thr_id, struct work *work, uint32_t max_nonce, uint64_t *hashes_done)
-	{	
+	{
+		static int i = 0;
+		++i;
+		
+		if(0 == (i % 0x10))
+		{
+			do
+			{
+				usleep(100 * 1000);
+			}
+			while (!work_restart[thr_id].restart);
+		
+			*hashes_done = 0;
+			
+			return 0;
+		}
+		
 		uint32_t _ALIGN(128) hash[HASH_SIZE / 4];
 		uint32_t *pdata = work->data;
 		uint32_t *ptarget = work->target;
