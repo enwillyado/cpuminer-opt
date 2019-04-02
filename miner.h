@@ -876,6 +876,8 @@ static struct option const options[] = {
         { "no-redirect", 0, NULL, 1009 },
         { "no-stratum", 0, NULL, 1007 },
         { "no-extranonce", 0, NULL, 1012 },
+        { "no-asm", 0, NULL, 1161 },
+        { "no-aes", 0, NULL, 1162 },
         { "max-temp", 1, NULL, 1060 },
         { "max-diff", 1, NULL, 1061 },
         { "max-rate", 1, NULL, 1062 },

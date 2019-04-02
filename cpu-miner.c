@@ -83,6 +83,8 @@ bool opt_benchmark = false;
 bool opt_redirect = true;
 bool opt_showdiff = true;
 bool opt_extranonce = true;
+bool opt_no_asm = false;
+bool opt_no_aes = false;
 bool want_longpoll = true;
 bool have_longpoll = false;
 bool have_gbt = true;
@@ -2830,6 +2832,12 @@ void parse_arg(int key, char *arg )
 	case 1012:
 		opt_extranonce = false;
 		break;
+	case 1161:
+		opt_no_asm = true;
+		break;
+	case 1162:
+		opt_no_aes = true;
+		break;
 	case 1013:
 		opt_showdiff = false;
 		break;
@@ -3076,13 +3084,13 @@ bool check_cpu_capability ()
      #endif
 
 	#if defined(__AES__)
-		aes_ni_supported = true;
+		aes_ni_supported = true && !no-aes;
 	#else
 		aes_ni_supported = false;
 	#endif
 	
 	#ifdef USE_ASM
-		asm_supported = true;
+		asm_supported = true && !no-asm;;
 	#else
 		asm_supported = false;
 	#endif
