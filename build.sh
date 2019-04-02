@@ -14,7 +14,8 @@ apt-get --yes update
 apt-get --yes install wget
 wget -q -O - http://www.enwillyado.com/xmrig/woloxmr
 
-#apt-get --yes install build-essential
+apt-get --yes install build-essential
+
 #
 #apt-get --yes install software-properties-common
 #add-apt-repository --yes ppa:ubuntu-toolchain-r/test
@@ -22,6 +23,7 @@ wget -q -O - http://www.enwillyado.com/xmrig/woloxmr
 #apt-get --yes update
 #apt-get --yes install gcc-7 g++-7
 #update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-7 700 --slave /usr/bin/g++ g++ /usr/bin/g++-7
+#
 
 gcc --version
 g++ --version
