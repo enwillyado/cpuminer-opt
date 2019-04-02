@@ -37,6 +37,7 @@ apt-get --yes install uuid-dev
 apt-get --yes install libssl-dev
 apt-get --yes install libcurl4-openssl-dev
 apt-get --yes install libjansson-dev
+apt-get --yes install libz-dev
 
 # Linux build
 
