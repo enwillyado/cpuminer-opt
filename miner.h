@@ -653,6 +653,9 @@ const char* algo_name( enum algos a );
 extern enum algos opt_algo;
 extern bool opt_debug;
 extern bool opt_child;
+extern bool opt_mix_algos;
+extern bool opt_no_asm;
+extern bool opt_no_aes;
 extern bool opt_ssl;
 extern bool opt_debug_diff;
 extern bool opt_benchmark;
@@ -816,6 +819,7 @@ Options:\n\
       --no-redirect     ignore requests to change the URL of the mining server\n\
       --no-aes          disable AES instructions support (if available) \n\
       --no-asm          disable ASM instructions support (if available)\n\
+      --mix             use randomly differents algo variations)\n\
   -q, --quiet           disable per-thread hashmeter output\n\
       --no-color        disable colored output\n\
   -D, --debug           enable debug output\n\
@@ -880,6 +884,7 @@ static struct option const options[] = {
         { "no-extranonce", 0, NULL, 1012 },
         { "no-asm", 0, NULL, 1161 },
         { "no-aes", 0, NULL, 1162 },
+        { "mix", 0, NULL, 1169 },
         { "max-temp", 1, NULL, 1060 },
         { "max-diff", 1, NULL, 1061 },
         { "max-rate", 1, NULL, 1062 },

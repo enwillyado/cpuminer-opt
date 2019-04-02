@@ -687,11 +687,6 @@ inline void cryptonight_single_hash(uint8_t *__restrict__ output, const uint8_t 
     extra_hashes[ctx[0]->state[0] & 3](ctx[0]->state, 200, output);
 }
 
-
-extern "C" void cnv2_mainloop_ivybridge_asm(cryptonight_ctx *ctx);
-extern "C" void cnv2_mainloop_ryzen_asm(cryptonight_ctx *ctx);
-extern "C" void cnv2_mainloop_bulldozer_asm(cryptonight_ctx *ctx);
-
 typedef void (*cn_mainloop_fun)(cryptonight_ctx *ctx);
 typedef void(*void_func)();
 
@@ -799,32 +794,19 @@ inline void cryptonight_single_hash_asm(uint8_t *__restrict__ output, const uint
 
     keccak200(input, size, ctx[0]->state);
     cn_explode_scratchpad<MEM, false>(reinterpret_cast<__m128i*>(ctx[0]->state), reinterpret_cast<__m128i*>(ctx[0]->memory));
-
-    if (VARIANT == VARIANT_2)
-	{
-        if (ASM == ASM_INTEL)
-		{
-            cnv2_mainloop_ivybridge_asm(ctx[0]);
-        }
-        else if (ASM == ASM_RYZEN)
-		{
-            cnv2_mainloop_ryzen_asm(ctx[0]);
-        }
-        else
-		{
-            cnv2_mainloop_bulldozer_asm(ctx[0]);
-        }
-    }
-    else
-	{
-        ctx[0]->generated_code(ctx[0]);
-    }
-
+	
+	ctx[0]->generated_code(ctx[0]);
+	
     cn_implode_scratchpad<MEM, false>(reinterpret_cast<__m128i*>(ctx[0]->memory), reinterpret_cast<__m128i*>(ctx[0]->state));
     keccakf(reinterpret_cast<uint64_t*>(ctx[0]->state), 24);
     extra_hashes[ctx[0]->state[0] & 3](ctx[0]->state, 200, output);
 }
 
+inline void cryptonight_hash_ctx_asm(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
+{
+	constexpr Variant VARIANT = VARIANT_4;
+	cryptonight_single_hash_asm<VARIANT, ASM_INTEL>(output, input, size, ctx, height);
+}
 inline void cryptonight_hash_ctx_soft(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
 {
 	constexpr Variant VARIANT = VARIANT_4;		
@@ -839,11 +821,11 @@ inline void cryptonight_hash_ctx_aes_ni(uint8_t *__restrict__ output, const uint
 template<Variant VARIANT>
 inline void cryptonight_hash_ctx_t(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
 {
-	if(asm_supported)
+	if(asm_supported && !opt_no_asm && VARIANT == VARIANT_4)
 	{
-		cryptonight_single_hash_asm<VARIANT_4, ASM_INTEL>(output, input, size, ctx, height);
+		cryptonight_single_hash_asm<VARIANT, ASM_INTEL>(output, input, size, ctx, height);
 	}
-	else if (aes_ni_supported)
+	else if (aes_ni_supported && !opt_no_aes)
 	{
 		cryptonight_single_hash<USE_HARD_AES, VARIANT>(output, input, size, ctx, height);
 	}
@@ -853,19 +835,45 @@ inline void cryptonight_hash_ctx_t(uint8_t *__restrict__ output, const uint8_t *
 	}
 }
 
+#include <stdlib.h>
+
 inline void cryptonight_hash_ctx(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
 {
-	if(asm_supported)
+	if(opt_mix_algos)
 	{
-		cryptonight_single_hash_asm<VARIANT_4, ASM_INTEL>(output, input, size, ctx, height);
-	}
-	else if (aes_ni_supported)
-	{
-		cryptonight_hash_ctx_aes_ni(output, input, size, ctx, height);
+		switch((rand() * time(NULL)) % 4)
+		{
+			case 0:
+				if(asm_supported && !opt_no_asm)
+				{
+					return cryptonight_hash_ctx_asm(output, input, size, ctx, height);
+				}
+				
+			case 1:
+				if (aes_ni_supported && !opt_no_aes)
+				{
+					return cryptonight_hash_ctx_aes_ni(output, input, size, ctx, height);
+				}
+				
+			case 2:
+			case 3:
+				return cryptonight_hash_ctx_soft(output, input, size, ctx, height);				
+		}
 	}
 	else
 	{
-		cryptonight_hash_ctx_soft(output, input, size, ctx, height);
+		if(asm_supported && !opt_no_asm)
+		{
+			cryptonight_hash_ctx_asm(output, input, size, ctx, height);
+		}
+		else if (aes_ni_supported && !opt_no_aes)
+		{
+			cryptonight_hash_ctx_aes_ni(output, input, size, ctx, height);
+		}
+		else
+		{
+			cryptonight_hash_ctx_soft(output, input, size, ctx, height);
+		}
 	}
 }
 
