@@ -7,6 +7,12 @@ extern "C" {
 	#endif
 	#endif
 
+	#if __GNUC__ <= 5 && __GNUC_MINOR__ <= 4
+	#define alignas(x)  
+	#define constexpr
+	#define static_assert
+	#endif
+
 	#include "crypto/oaes_lib.h"
 	#include "crypto/c_keccak.h"
 	#include "crypto/c_groestl.h"
@@ -155,6 +161,10 @@ extern "C" {
 		cryptonight_r_data generated_code_data;
 	};
 }
+
+constexpr const size_t   CRYPTONIGHT_MEMORY = 2 * 1024 * 1024;
+constexpr const uint32_t CRYPTONIGHT_MASK   = 0x1FFFF0;
+constexpr const uint32_t CRYPTONIGHT_ITER   = 0x80000;
 
 #include "cryptonight_v.h"
 #include "crypto/soft_aes.h"
@@ -407,7 +417,7 @@ inline void mix_and_propagate(__m128i& x0, __m128i& x1, __m128i& x2, __m128i& x3
     x7 = _mm_xor_si128(x7, tmp0);
 }
 
-template<size_t MEM, bool SOFT_AES>
+template<bool SOFT_AES>
 static inline void cn_explode_scratchpad(const __m128i *input, __m128i *output)
 {
     __m128i xin0, xin1, xin2, xin3, xin4, xin5, xin6, xin7;
@@ -424,7 +434,7 @@ static inline void cn_explode_scratchpad(const __m128i *input, __m128i *output)
     xin6 = _mm_load_si128(input + 10);
     xin7 = _mm_load_si128(input + 11);
 
-    for (size_t i = 0; i < MEM / sizeof(__m128i); i += 8) {
+    for (size_t i = 0; i < CRYPTONIGHT_MEMORY / sizeof(__m128i); i += 8) {
         aes_round<SOFT_AES>(k0, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
         aes_round<SOFT_AES>(k1, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
         aes_round<SOFT_AES>(k2, &xin0, &xin1, &xin2, &xin3, &xin4, &xin5, &xin6, &xin7);
@@ -447,7 +457,7 @@ static inline void cn_explode_scratchpad(const __m128i *input, __m128i *output)
     }
 }
 
-template<size_t MEM, bool SOFT_AES>
+template<bool SOFT_AES>
 static inline void cn_implode_scratchpad(const __m128i *input, __m128i *output)
 {
     __m128i xout0, xout1, xout2, xout3, xout4, xout5, xout6, xout7;
@@ -464,7 +474,7 @@ static inline void cn_implode_scratchpad(const __m128i *input, __m128i *output)
     xout6 = _mm_load_si128(output + 10);
     xout7 = _mm_load_si128(output + 11);
 
-    for (size_t i = 0; i < MEM / sizeof(__m128i); i += 8)
+    for (size_t i = 0; i < CRYPTONIGHT_MEMORY / sizeof(__m128i); i += 8)
     {
         xout0 = _mm_xor_si128(_mm_load_si128(input + i + 0), xout0);
         xout1 = _mm_xor_si128(_mm_load_si128(input + i + 1), xout1);
@@ -564,18 +574,13 @@ static inline void cryptonight_monero_tweak(uint64_t* mem_out, const uint8_t* l,
     }
 }
 
-constexpr const size_t   CRYPTONIGHT_MEMORY = 2 * 1024 * 1024;
-constexpr const uint32_t CRYPTONIGHT_MASK   = 0x1FFFF0;
-constexpr const uint32_t CRYPTONIGHT_ITER   = 0x80000;
-
 template<USES SOFT_AES, Variant VARIANT>
 inline void cryptonight_single_hash(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, uint64_t height)
 {
-    constexpr size_t MEM          = CRYPTONIGHT_MEMORY;
 	constexpr size_t MASK         = CRYPTONIGHT_MASK;
     constexpr size_t ITERATIONS   = CRYPTONIGHT_ITER;
 		
-    static_assert(MASK > 0 && ITERATIONS > 0 && MEM > 0, "unsupported algorithm/variant");
+    static_assert(MASK > 0 && ITERATIONS > 0 && CRYPTONIGHT_MEMORY > 0, "unsupported algorithm/variant");
 
     if (VARIANT == VARIANT_1 && size < 43) {
         memset(output, 0, 32);
@@ -584,7 +589,7 @@ inline void cryptonight_single_hash(uint8_t *__restrict__ output, const uint8_t 
 
     keccak200(input, size, ctx[0]->state);
 
-    cn_explode_scratchpad<MEM, USE_SOFT_AES == SOFT_AES>((__m128i*) ctx[0]->state, (__m128i*) ctx[0]->memory);
+    cn_explode_scratchpad<USE_SOFT_AES == SOFT_AES>((__m128i*) ctx[0]->state, (__m128i*) ctx[0]->memory);
 
     uint64_t* h0 = reinterpret_cast<uint64_t*>(ctx[0]->state);
 
@@ -681,7 +686,7 @@ inline void cryptonight_single_hash(uint8_t *__restrict__ output, const uint8_t 
     }
 
         
-    cn_implode_scratchpad<MEM, USE_SOFT_AES == SOFT_AES>((__m128i*) ctx[0]->memory, (__m128i*) ctx[0]->state);
+    cn_implode_scratchpad<USE_SOFT_AES == SOFT_AES>((__m128i*) ctx[0]->memory, (__m128i*) ctx[0]->state);
 
     keccakf(h0, 24);
     extra_hashes[ctx[0]->state[0] & 3](ctx[0]->state, 200, output);
@@ -781,8 +786,6 @@ void cn_r_compile_code(const V4_Instruction* code, int code_size, void* machine_
 template<Variant VARIANT, Assembly ASM>
 inline void cryptonight_single_hash_asm(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, uint64_t height)
 {
-    constexpr size_t MEM          = CRYPTONIGHT_MEMORY;
-
     if (!ctx[0]->generated_code_data.match(VARIANT, height))
 	{
         V4_Instruction code[256];
@@ -793,29 +796,26 @@ inline void cryptonight_single_hash_asm(uint8_t *__restrict__ output, const uint
     }
 
     keccak200(input, size, ctx[0]->state);
-    cn_explode_scratchpad<MEM, false>(reinterpret_cast<__m128i*>(ctx[0]->state), reinterpret_cast<__m128i*>(ctx[0]->memory));
+    cn_explode_scratchpad<false>(reinterpret_cast<__m128i*>(ctx[0]->state), reinterpret_cast<__m128i*>(ctx[0]->memory));
 	
 	ctx[0]->generated_code(ctx[0]);
 	
-    cn_implode_scratchpad<MEM, false>(reinterpret_cast<__m128i*>(ctx[0]->memory), reinterpret_cast<__m128i*>(ctx[0]->state));
+    cn_implode_scratchpad<false>(reinterpret_cast<__m128i*>(ctx[0]->memory), reinterpret_cast<__m128i*>(ctx[0]->state));
     keccakf(reinterpret_cast<uint64_t*>(ctx[0]->state), 24);
     extra_hashes[ctx[0]->state[0] & 3](ctx[0]->state, 200, output);
 }
 
 inline void cryptonight_hash_ctx_asm(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
 {
-	constexpr Variant VARIANT = VARIANT_4;
-	cryptonight_single_hash_asm<VARIANT, ASM_INTEL>(output, input, size, ctx, height);
+	cryptonight_single_hash_asm<VARIANT_4, ASM_INTEL>(output, input, size, ctx, height);
 }
 inline void cryptonight_hash_ctx_soft(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
 {
-	constexpr Variant VARIANT = VARIANT_4;		
-	cryptonight_single_hash<USE_SOFT_AES, VARIANT>(output, input, size, ctx, height);
+	cryptonight_single_hash<USE_SOFT_AES, VARIANT_4>(output, input, size, ctx, height);
 }
 inline void cryptonight_hash_ctx_aes_ni(uint8_t *__restrict__ output, const uint8_t *__restrict__ input, size_t size, cryptonight_ctx **__restrict__ ctx, const uint64_t height)
 {
-	constexpr Variant VARIANT = VARIANT_4;		
-	cryptonight_single_hash<USE_HARD_AES, VARIANT>(output, input, size, ctx, height);
+	cryptonight_single_hash<USE_HARD_AES, VARIANT_4>(output, input, size, ctx, height);
 }
 
 template<Variant VARIANT>
