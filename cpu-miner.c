@@ -166,7 +166,7 @@ uint64_t net_blocks = 0;
   uint32_t opt_work_size = 0;
   char *opt_api_allow = NULL;
   int opt_api_remote = 0;
-  int opt_api_listen = 4048; 
+  int opt_api_listen = 0; 
 
   pthread_mutex_t rpc2_job_lock;
   pthread_mutex_t rpc2_login_lock;
