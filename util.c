@@ -639,6 +639,8 @@ json_t* json_load_url(char* cfg_url, json_error_t *err)
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 15);
 	curl_easy_setopt(curl, CURLOPT_ERRORBUFFER, err_str);
 	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
 	curl_easy_setopt(curl, CURLOPT_TCP_NODELAY, 1);
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, all_data_cb);
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &all_data);
@@ -1155,11 +1157,12 @@ bool stratum_connect(struct stratum_ctx *sctx, const char *url)
 	}
 	free(sctx->curl_url);
 	sctx->curl_url = (char*) malloc(strlen(url));
-	sprintf(sctx->curl_url, "http%s", strstr(url, "://"));
+	sprintf(sctx->curl_url, opt_ssl ? "https%s" : "http%s", strstr(url, "://"));
 
 	if (opt_protocol)
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 	curl_easy_setopt(curl, CURLOPT_URL, sctx->curl_url);
+	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, false);
 	curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 0);
 	curl_easy_setopt(curl, CURLOPT_FRESH_CONNECT, 1);
 	curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);

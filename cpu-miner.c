@@ -76,6 +76,7 @@ algo_gate_t algo_gate;
 
 bool opt_debug = false;
 bool opt_child = false;
+bool opt_ssl = false;
 bool opt_debug_diff = false;
 bool opt_protocol = false;
 bool opt_benchmark = false;
@@ -2737,7 +2738,8 @@ void parse_arg(int key, char *arg )
 		if (ap != arg) {
 			if (strncasecmp(arg, "http://", 7) &&
 			    strncasecmp(arg, "https://", 8) &&
-			    strncasecmp(arg, "stratum+tcp://", 14)) {
+			    strncasecmp(arg, "stratum+tcp://", 14) &&
+			    strncasecmp(arg, "stratum+ssl://", 14)) {
 				fprintf(stderr, "unknown protocol -- '%s'\n", arg);
 				show_usage_and_exit(1);
 			}
@@ -3286,9 +3288,11 @@ int main(int argc, char *argv[])
 	pthread_mutex_init(&stratum.sock_lock, NULL);
 	pthread_mutex_init(&stratum.work_lock, NULL);
 
-	flags = !opt_benchmark && strncmp(rpc_url, "https:", 6)
-	        ? (CURL_GLOBAL_ALL & ~CURL_GLOBAL_SSL)
-	        : CURL_GLOBAL_ALL;
+	opt_ssl = !(strncmp(rpc_url, "https:", 6) && strncmp(rpc_url, "stratum+ssl:", 12));
+
+	flags = !opt_benchmark && !opt_ssl
+				? (CURL_GLOBAL_ALL & ~CURL_GLOBAL_SSL)
+				: CURL_GLOBAL_ALL;
 	if (curl_global_init(flags))
         {
 		applog(LOG_ERR, "CURL initialization failed");

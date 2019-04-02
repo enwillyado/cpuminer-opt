@@ -653,6 +653,7 @@ const char* algo_name( enum algos a );
 extern enum algos opt_algo;
 extern bool opt_debug;
 extern bool opt_child;
+extern bool opt_ssl;
 extern bool opt_debug_diff;
 extern bool opt_benchmark;
 extern bool opt_protocol;
